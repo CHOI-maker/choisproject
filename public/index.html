@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AutoStock 관련 정보 조회</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      input,
+      button {
+        padding: 10px;
+        font-size: 15px;
+      }
+      input {
+        flex: 1;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+      }
+      td:first-child {
+        width: 40%;
+        font-weight: bold;
+      }
+      #error {
+        color: #d00;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>AutoStock 관련 주식 정보 조회</h1>
+    <p>심볼(예: AAPL, TSLA, 069500.KS)을 입력하면 현재 시세 정보를 보여줍니다.</p>
+
+    <div class="row">
+      <input id="symbol" value="AAPL" placeholder="종목 심볼 입력" />
+      <button id="searchBtn">조회</button>
+    </div>
+
+    <div id="error"></div>
+    <table id="resultTable" hidden>
+      <tbody id="resultBody"></tbody>
+    </table>
+
+    <script>
+      const symbolInput = document.getElementById("symbol");
+      const searchBtn = document.getElementById("searchBtn");
+      const errorEl = document.getElementById("error");
+      const resultTable = document.getElementById("resultTable");
+      const resultBody = document.getElementById("resultBody");
+
+      const labels = {
+        symbol: "심볼",
+        shortName: "종목명",
+        marketState: "장 상태",
+        regularMarketPrice: "현재가",
+        regularMarketChange: "변동값",
+        regularMarketChangePercent: "변동률(%)",
+        regularMarketVolume: "거래량",
+        regularMarketDayHigh: "당일 고가",
+        regularMarketDayLow: "당일 저가",
+        regularMarketPreviousClose: "전일 종가",
+        currency: "통화",
+        exchange: "거래소",
+      };
+
+      async function fetchStock() {
+        const symbol = symbolInput.value.trim();
+        if (!symbol) {
+          errorEl.textContent = "심볼을 입력해 주세요.";
+          resultTable.hidden = true;
+          return;
+        }
+
+        errorEl.textContent = "";
+        resultTable.hidden = true;
+
+        try {
+          const response = await fetch(`/api/stock/${encodeURIComponent(symbol)}`);
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "조회 실패");
+          }
+
+          resultBody.innerHTML = Object.entries(labels)
+            .map(([key, label]) => {
+              const value = data[key] ?? "-";
+              return `<tr><td>${label}</td><td>${value}</td></tr>`;
+            })
+            .join("");
+          resultTable.hidden = false;
+        } catch (error) {
+          errorEl.textContent = `오류: ${error.message}`;
+        }
+      }
+
+      searchBtn.addEventListener("click", fetchStock);
+      symbolInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") fetchStock();
+      });
+    </script>
+  </body>
+</html>
