@@ -3,116 +3,877 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AutoStock 관련 정보 조회</title>
+    <title>AutoStock 관리 패널</title>
     <style>
+      /* ── 전역 ── */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       body {
-        font-family: Arial, sans-serif;
-        max-width: 760px;
-        margin: 40px auto;
-        padding: 0 16px;
-      }
-      .row {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background: #0f1117;
+        color: #e4e6eb;
         display: flex;
-        gap: 8px;
+        min-height: 100vh;
       }
-      input,
-      button {
-        padding: 10px;
-        font-size: 15px;
+
+      /* ── 사이드바 ── */
+      #sidebar {
+        width: 220px;
+        min-height: 100vh;
+        background: #1a1d27;
+        border-right: 1px solid #2a2d3a;
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 0; left: 0;
       }
-      input {
+      #sidebar .logo {
+        padding: 24px 20px 16px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #4f8ef7;
+        border-bottom: 1px solid #2a2d3a;
+        letter-spacing: 0.5px;
+      }
+      #sidebar .logo span { color: #e4e6eb; }
+      #sidebar nav { flex: 1; padding: 12px 0; }
+      #sidebar nav a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 20px;
+        color: #9ba3b2;
+        text-decoration: none;
+        font-size: 14px;
+        transition: background 0.15s, color 0.15s;
+        cursor: pointer;
+      }
+      #sidebar nav a:hover { background: #22263a; color: #e4e6eb; }
+      #sidebar nav a.active { background: #1e3a6e; color: #4f8ef7; font-weight: 600; }
+      #sidebar nav a .icon { font-size: 18px; width: 22px; text-align: center; }
+      #sidebar .server-badge {
+        margin: 0 16px 16px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+        background: #1e3a1e;
+        color: #4caf50;
+        border: 1px solid #2e5a2e;
+      }
+      #sidebar .server-badge.off { background: #3a1e1e; color: #f44336; border-color: #5a2e2e; }
+
+      /* ── 메인 콘텐츠 ── */
+      #main {
+        margin-left: 220px;
         flex: 1;
+        padding: 28px 32px;
+        max-width: calc(100vw - 220px);
       }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
+      .page { display: none; }
+      .page.active { display: block; }
+      .page-title {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 24px;
+        color: #fff;
+        border-left: 4px solid #4f8ef7;
+        padding-left: 12px;
       }
-      td {
-        border: 1px solid #ddd;
-        padding: 8px;
+
+      /* ── 카드 ── */
+      .card {
+        background: #1a1d27;
+        border: 1px solid #2a2d3a;
+        border-radius: 12px;
+        padding: 20px 24px;
+        margin-bottom: 20px;
       }
-      td:first-child {
-        width: 40%;
-        font-weight: bold;
+      .card-title {
+        font-size: 13px;
+        color: #9ba3b2;
+        margin-bottom: 6px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
-      #error {
-        color: #d00;
-        margin-top: 10px;
+      .card-value {
+        font-size: 26px;
+        font-weight: 700;
+        color: #fff;
+      }
+      .card-sub { font-size: 13px; margin-top: 4px; }
+      .up { color: #4caf50; }
+      .down { color: #f44336; }
+      .neutral { color: #9ba3b2; }
+
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      /* ── 보유종목 테이블 ── */
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      thead th {
+        padding: 10px 12px;
+        text-align: left;
+        background: #22263a;
+        color: #9ba3b2;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+      tbody td { padding: 10px 12px; border-bottom: 1px solid #22263a; }
+      tbody tr:last-child td { border-bottom: none; }
+      tbody tr:hover td { background: #1e2235; }
+
+      /* ── 폼 ── */
+      .form-section { margin-bottom: 28px; }
+      .form-section h3 {
+        font-size: 14px;
+        color: #9ba3b2;
+        margin-bottom: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #2a2d3a;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .form-grid.wide { grid-template-columns: 1fr; }
+      .form-group { display: flex; flex-direction: column; gap: 6px; }
+      .form-group label { font-size: 13px; color: #c0c4cc; font-weight: 500; }
+      .form-group input[type="text"],
+      .form-group input[type="number"],
+      .form-group input[type="time"],
+      .form-group select {
+        padding: 9px 12px;
+        background: #0f1117;
+        border: 1px solid #2a2d3a;
+        border-radius: 8px;
+        color: #e4e6eb;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .form-group input:focus,
+      .form-group select:focus { border-color: #4f8ef7; }
+      .form-group input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+      .check-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 0;
+      }
+      .check-row label { font-size: 14px; color: #c0c4cc; cursor: pointer; }
+
+      /* ── 버튼 ── */
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.15s, transform 0.1s;
+      }
+      .btn:hover { opacity: 0.88; }
+      .btn:active { transform: scale(0.97); }
+      .btn-primary { background: #4f8ef7; color: #fff; }
+      .btn-success { background: #4caf50; color: #fff; }
+      .btn-danger { background: #f44336; color: #fff; }
+      .btn-secondary { background: #2a2d3a; color: #e4e6eb; }
+      .btn-sm { padding: 6px 12px; font-size: 12px; }
+      .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+
+      /* ── 태그/배지 ── */
+      .badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .badge-green { background: #1a3a1a; color: #4caf50; }
+      .badge-red { background: #3a1a1a; color: #f44336; }
+      .badge-blue { background: #1a2a4a; color: #4f8ef7; }
+      .badge-gray { background: #22263a; color: #9ba3b2; }
+
+      /* ── 알림 ── */
+      .toast {
+        position: fixed;
+        bottom: 24px; right: 24px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+      }
+      .toast.show { opacity: 1; }
+      .toast.success { background: #1e4d1e; color: #4caf50; border: 1px solid #2e6e2e; }
+      .toast.error { background: #4d1e1e; color: #f44336; border: 1px solid #6e2e2e; }
+
+      /* ── 주식 조회 ── */
+      .search-row { display: flex; gap: 8px; margin-bottom: 16px; }
+      .search-row input {
+        flex: 1;
+        padding: 10px 14px;
+        background: #0f1117;
+        border: 1px solid #2a2d3a;
+        border-radius: 8px;
+        color: #e4e6eb;
+        font-size: 15px;
+        outline: none;
+      }
+      .search-row input:focus { border-color: #4f8ef7; }
+      #stockError { color: #f44336; font-size: 13px; margin-bottom: 12px; }
+
+      /* ── 로그 뷰어 ── */
+      #logBox {
+        background: #0a0c12;
+        border: 1px solid #2a2d3a;
+        border-radius: 10px;
+        padding: 14px;
+        height: 320px;
+        overflow-y: auto;
+        font-family: 'Consolas', 'Courier New', monospace;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+      .log-line { margin-bottom: 2px; }
+      .log-line .log-time { color: #555; margin-right: 8px; }
+      .log-line.stdout .log-msg { color: #b0d4ff; }
+      .log-line.stderr .log-msg { color: #ffb0b0; }
+      .log-line.system .log-msg { color: #ffe082; }
+
+      /* ── 종목 리스트 ── */
+      .stock-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        background: #22263a;
+        border-radius: 20px;
+        font-size: 13px;
+        margin: 4px;
+      }
+      .stock-tag button {
+        background: none;
+        border: none;
+        color: #9ba3b2;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        padding: 0;
+      }
+      .stock-tag button:hover { color: #f44336; }
+      #stockTagsContainer { min-height: 40px; margin-bottom: 10px; }
+      .add-stock-row { display: flex; gap: 8px; }
+      .add-stock-row input {
+        flex: 1;
+        padding: 8px 12px;
+        background: #0f1117;
+        border: 1px solid #2a2d3a;
+        border-radius: 8px;
+        color: #e4e6eb;
+        font-size: 13px;
+        outline: none;
+      }
+      .add-stock-row input:focus { border-color: #4f8ef7; }
+
+      /* ── 서버 상태 표시 ── */
+      .server-status-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .status-dot {
+        width: 12px; height: 12px;
+        border-radius: 50%;
+        background: #f44336;
+        box-shadow: 0 0 6px #f44336;
+        flex-shrink: 0;
+      }
+      .status-dot.running {
+        background: #4caf50;
+        box-shadow: 0 0 6px #4caf50;
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      .status-text { font-size: 16px; font-weight: 600; }
+
+      /* ── 반응형 ── */
+      @media (max-width: 768px) {
+        #sidebar { width: 60px; }
+        #sidebar .logo, #sidebar nav a span, #sidebar .server-badge { display: none; }
+        #main { margin-left: 60px; padding: 16px; max-width: calc(100vw - 60px); }
+        .form-grid { grid-template-columns: 1fr; }
+        .dashboard-grid { grid-template-columns: 1fr 1fr; }
       }
     </style>
   </head>
   <body>
-    <h1>AutoStock 관련 주식 정보 조회</h1>
-    <p>심볼(예: AAPL, TSLA, 069500.KS)을 입력하면 현재 시세 정보를 보여줍니다.</p>
 
-    <div class="row">
-      <input id="symbol" value="AAPL" placeholder="종목 심볼 입력" />
-      <button id="searchBtn">조회</button>
-    </div>
+    <!-- 사이드바 -->
+    <aside id="sidebar">
+      <div class="logo">Auto<span>Stock</span> 패널</div>
+      <nav>
+        <a class="nav-link active" data-page="dashboard">
+          <span class="icon">📊</span><span>대시보드</span>
+        </a>
+        <a class="nav-link" data-page="stock">
+          <span class="icon">🔍</span><span>주식 조회</span>
+        </a>
+        <a class="nav-link" data-page="settings">
+          <span class="icon">⚙️</span><span>AutoStock 설정</span>
+        </a>
+        <a class="nav-link" data-page="server">
+          <span class="icon">🖥️</span><span>서버 관리</span>
+        </a>
+      </nav>
+      <div id="sidebarBadge" class="server-badge off">● 서버 중지</div>
+    </aside>
 
-    <div id="error"></div>
-    <table id="resultTable" hidden>
-      <tbody id="resultBody"></tbody>
-    </table>
+    <!-- 메인 콘텐츠 -->
+    <main id="main">
+
+      <!-- ① 대시보드 -->
+      <section class="page active" id="page-dashboard">
+        <h2 class="page-title">대시보드</h2>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-title">총 자산</div>
+            <div class="card-value" id="dash-total">—</div>
+            <div class="card-sub neutral" id="dash-total-sub">계좌 잔고 + 평가금액</div>
+          </div>
+          <div class="card">
+            <div class="card-title">평가손익</div>
+            <div class="card-value" id="dash-pnl">—</div>
+            <div class="card-sub" id="dash-pnl-sub"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">수익률</div>
+            <div class="card-value" id="dash-rate">—</div>
+            <div class="card-sub" id="dash-rate-sub"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">서버 상태</div>
+            <div class="card-value" id="dash-server">—</div>
+            <div class="card-sub" id="dash-pid" class="neutral"></div>
+          </div>
+        </div>
+
+        <!-- 설정 요약 -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">계좌 정보</div>
+          <table>
+            <tbody id="accountInfoBody">
+              <tr><td style="color:#9ba3b2;width:180px">계좌번호</td><td id="acc-cano">—</td></tr>
+              <tr><td style="color:#9ba3b2">상품구분</td><td id="acc-prdt">—</td></tr>
+              <tr><td style="color:#9ba3b2">API 환경</td><td id="acc-env">—</td></tr>
+              <tr><td style="color:#9ba3b2">Discord 알림</td><td id="acc-discord">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 보유 종목 -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">매매 대상 종목</div>
+          <table>
+            <thead>
+              <tr>
+                <th>종목코드</th>
+                <th>현재가</th>
+                <th>변동률</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody id="holdingBody">
+              <tr><td colspan="4" style="color:#9ba3b2;text-align:center;padding:20px">
+                종목을 설정 페이지에서 등록하면 여기에 표시됩니다.
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ② 주식 조회 -->
+      <section class="page" id="page-stock">
+        <h2 class="page-title">주식 시세 조회</h2>
+        <div class="card">
+          <p style="color:#9ba3b2;font-size:13px;margin-bottom:14px">
+            심볼(예: AAPL, TSLA, 005930.KS)을 입력하면 현재 시세 정보를 보여줍니다.
+          </p>
+          <div class="search-row">
+            <input id="symbolInput" value="AAPL" placeholder="종목 심볼 입력" />
+            <button class="btn btn-primary" id="searchBtn">조회</button>
+          </div>
+          <div id="stockError"></div>
+          <table id="resultTable" hidden>
+            <tbody id="resultBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ③ AutoStock 설정 -->
+      <section class="page" id="page-settings">
+        <h2 class="page-title">AutoStock 설정</h2>
+        <div class="card">
+
+          <!-- KIS API 설정 -->
+          <div class="form-section">
+            <h3>KIS API 설정</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>APP KEY</label>
+                <input type="text" id="cfg-app_key" placeholder="한국투자증권 App Key" />
+              </div>
+              <div class="form-group">
+                <label>APP SECRET</label>
+                <input type="text" id="cfg-app_secret" placeholder="한국투자증권 App Secret" />
+              </div>
+              <div class="form-group">
+                <label>계좌번호 (CANO)</label>
+                <input type="text" id="cfg-cano" placeholder="8자리 계좌번호" maxlength="8" />
+              </div>
+              <div class="form-group">
+                <label>상품코드 (ACNT_PRDT_CD)</label>
+                <select id="cfg-acnt_prdt_cd">
+                  <option value="01">01 (종합계좌)</option>
+                  <option value="02">02 (ISA계좌)</option>
+                </select>
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>API 서버 URL</label>
+                <select id="cfg-url_base">
+                  <option value="https://openapivts.koreainvestment.com:9443">모의투자 서버</option>
+                  <option value="https://openapi.koreainvestment.com:9443">실전투자 서버</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 거래 설정 -->
+          <div class="form-section">
+            <h3>거래 설정</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>종목당 매수 금액 (원)</label>
+                <input type="number" id="cfg-buy_amount" min="0" step="10000" />
+              </div>
+              <div class="form-group">
+                <label>목표 수익률 (%) — 매도 기준</label>
+                <input type="number" id="cfg-sell_profit_percent" step="0.1" />
+              </div>
+              <div class="form-group">
+                <label>손절 기준 (%)</label>
+                <input type="number" id="cfg-stop_loss_percent" step="0.1" />
+              </div>
+              <div class="form-group">
+                <label>최대 보유 종목 수</label>
+                <input type="number" id="cfg-max_buy_count" min="1" max="50" />
+              </div>
+              <div class="form-group">
+                <label>거래 시작 시간</label>
+                <input type="time" id="cfg-trading_start_time" />
+              </div>
+              <div class="form-group">
+                <label>거래 종료 시간</label>
+                <input type="time" id="cfg-trading_end_time" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Discord 알림 -->
+          <div class="form-section">
+            <h3>Discord 알림</h3>
+            <div class="check-row">
+              <input type="checkbox" id="cfg-use_discord" />
+              <label for="cfg-use_discord">Discord 알림 사용</label>
+            </div>
+            <div class="form-grid wide">
+              <div class="form-group">
+                <label>Webhook URL</label>
+                <input type="text" id="cfg-webhook_url" placeholder="https://discord.com/api/webhooks/..." />
+              </div>
+            </div>
+          </div>
+
+          <!-- 매매 종목 -->
+          <div class="form-section">
+            <h3>매매 종목 목록</h3>
+            <div id="stockTagsContainer"></div>
+            <div class="add-stock-row">
+              <input type="text" id="newStockInput" placeholder="종목코드 입력 (예: 005930, AAPL)" />
+              <button class="btn btn-secondary btn-sm" id="addStockBtn">+ 추가</button>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" id="saveConfigBtn">💾 설정 저장</button>
+            <button class="btn btn-secondary" id="resetConfigBtn">↺ 기본값 복원</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ④ 서버 관리 -->
+      <section class="page" id="page-server">
+        <h2 class="page-title">서버 관리</h2>
+
+        <div class="card">
+          <div class="server-status-row">
+            <div class="status-dot" id="statusDot"></div>
+            <span class="status-text" id="statusText">확인 중...</span>
+            <span id="pidText" style="color:#9ba3b2;font-size:13px"></span>
+          </div>
+          <div class="btn-row" style="margin-top:0">
+            <button class="btn btn-success" id="startBtn">▶ AutoStock 시작</button>
+            <button class="btn btn-danger" id="stopBtn">■ 중지</button>
+            <button class="btn btn-secondary" id="refreshLogsBtn">↻ 로그 새로고침</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div class="card-title" style="margin:0">실행 로그</div>
+            <button class="btn btn-secondary btn-sm" id="clearLogsBtn">지우기</button>
+          </div>
+          <div id="logBox"><span style="color:#555">로그가 없습니다.</span></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 알림 토스트 -->
+    <div class="toast" id="toast"></div>
 
     <script>
-      const symbolInput = document.getElementById("symbol");
-      const searchBtn = document.getElementById("searchBtn");
-      const errorEl = document.getElementById("error");
-      const resultTable = document.getElementById("resultTable");
-      const resultBody = document.getElementById("resultBody");
+      // ── 내비게이션 ──────────────────────────────────────────────────────────
+      const navLinks = document.querySelectorAll('.nav-link');
+      const pages = document.querySelectorAll('.page');
 
-      const labels = {
-        symbol: "심볼",
-        shortName: "종목명",
-        marketState: "장 상태",
-        regularMarketPrice: "현재가",
-        regularMarketChange: "변동값",
-        regularMarketChangePercent: "변동률(%)",
-        regularMarketVolume: "거래량",
-        regularMarketDayHigh: "당일 고가",
-        regularMarketDayLow: "당일 저가",
-        regularMarketPreviousClose: "전일 종가",
-        currency: "통화",
-        exchange: "거래소",
+      function navigate(pageId) {
+        navLinks.forEach(a => a.classList.toggle('active', a.dataset.page === pageId));
+        pages.forEach(p => p.classList.toggle('active', p.id === 'page-' + pageId));
+      }
+
+      navLinks.forEach(a => {
+        a.addEventListener('click', () => {
+          navigate(a.dataset.page);
+          if (a.dataset.page === 'dashboard') loadDashboard();
+          if (a.dataset.page === 'settings') loadConfig();
+          if (a.dataset.page === 'server') refreshServerStatus();
+        });
+      });
+
+      // ── 토스트 알림 ─────────────────────────────────────────────────────────
+      let toastTimer;
+      function showToast(msg, type = 'success') {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast show ' + type;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { t.classList.remove('show'); }, 3000);
+      }
+
+      // ── 숫자 포맷 ───────────────────────────────────────────────────────────
+      function fmt(n, dec = 0) {
+        if (n == null || n === '') return '—';
+        return Number(n).toLocaleString('ko-KR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+      }
+      function fmtPct(n) {
+        if (n == null) return '—';
+        return (n >= 0 ? '+' : '') + Number(n).toFixed(2) + '%';
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // ① 대시보드
+      // ═══════════════════════════════════════════════════════════════════════
+      async function loadDashboard() {
+        // 설정 로드
+        try {
+          const cfg = await fetch('/api/config').then(r => r.json());
+          document.getElementById('acc-cano').textContent =
+            cfg.api?.cano ? cfg.api.cano.replace(/(\d{4})(\d{4})/, '$1-$2') : '(미설정)';
+          document.getElementById('acc-prdt').textContent = cfg.api?.acnt_prdt_cd || '—';
+          document.getElementById('acc-env').textContent =
+            (cfg.api?.url_base || '').includes('vts') ? '모의투자' : '실전투자';
+          document.getElementById('acc-discord').textContent =
+            cfg.discord?.use_discord ? `✅ 활성 (${cfg.discord.webhook_url ? '설정됨' : '미설정'})` : '❌ 비활성';
+
+          // 보유 종목 조회
+          const stocks = cfg.stocks || [];
+          const tbody = document.getElementById('holdingBody');
+          if (stocks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="color:#9ba3b2;text-align:center;padding:20px">등록된 종목이 없습니다.</td></tr>';
+          } else {
+            tbody.innerHTML = '';
+            await Promise.all(stocks.map(async (sym) => {
+              const row = document.createElement('tr');
+              try {
+                const d = await fetch('/api/stock/' + encodeURIComponent(sym)).then(r => r.json());
+                const chg = d.regularMarketChangePercent ?? 0;
+                const cls = chg > 0 ? 'up' : chg < 0 ? 'down' : 'neutral';
+                row.innerHTML = `
+                  <td><strong>${d.symbol}</strong><br><span style="color:#9ba3b2;font-size:11px">${d.shortName||''}</span></td>
+                  <td>${fmt(d.regularMarketPrice, 2)} <span style="font-size:11px">${d.currency}</span></td>
+                  <td class="${cls}">${fmtPct(chg)}</td>
+                  <td><span class="badge ${chg >= 0 ? 'badge-green' : 'badge-red'}">${d.marketState||'—'}</span></td>`;
+              } catch (_) {
+                row.innerHTML = `<td>${sym}</td><td colspan="3" style="color:#9ba3b2">조회 실패</td>`;
+              }
+              tbody.appendChild(row);
+            }));
+          }
+        } catch (_) {}
+
+        // 서버 상태
+        try {
+          const st = await fetch('/api/server/status').then(r => r.json());
+          document.getElementById('dash-server').textContent = st.running ? '🟢 실행 중' : '🔴 중지';
+          document.getElementById('dash-server').className = 'card-value ' + (st.running ? 'up' : 'down');
+          document.getElementById('dash-pid').textContent = st.running ? `PID: ${st.pid}` : '';
+
+          const badge = document.getElementById('sidebarBadge');
+          badge.textContent = st.running ? '● 실행 중' : '● 서버 중지';
+          badge.className = 'server-badge' + (st.running ? '' : ' off');
+        } catch (_) {}
+
+        // P&L — 실계좌 연동 전 안내
+        document.getElementById('dash-total').textContent = '(KIS 연동 필요)';
+        document.getElementById('dash-pnl').textContent = '(KIS 연동 필요)';
+        document.getElementById('dash-rate').textContent = '(KIS 연동 필요)';
+        document.getElementById('dash-total-sub').textContent = '설정에서 API 키를 입력해 주세요.';
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // ② 주식 조회
+      // ═══════════════════════════════════════════════════════════════════════
+      const stockLabels = {
+        symbol: '심볼', shortName: '종목명', marketState: '장 상태',
+        regularMarketPrice: '현재가', regularMarketChange: '변동값',
+        regularMarketChangePercent: '변동률(%)', regularMarketVolume: '거래량',
+        regularMarketDayHigh: '당일 고가', regularMarketDayLow: '당일 저가',
+        regularMarketPreviousClose: '전일 종가', currency: '통화', exchange: '거래소',
       };
 
       async function fetchStock() {
-        const symbol = symbolInput.value.trim();
-        if (!symbol) {
-          errorEl.textContent = "심볼을 입력해 주세요.";
-          resultTable.hidden = true;
-          return;
-        }
-
-        errorEl.textContent = "";
-        resultTable.hidden = true;
-
+        const sym = document.getElementById('symbolInput').value.trim();
+        const errEl = document.getElementById('stockError');
+        const tbl = document.getElementById('resultTable');
+        if (!sym) { errEl.textContent = '심볼을 입력해 주세요.'; tbl.hidden = true; return; }
+        errEl.textContent = '';
+        tbl.hidden = true;
         try {
-          const response = await fetch(`/api/stock/${encodeURIComponent(symbol)}`);
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.error || "조회 실패");
-          }
-
-          resultBody.innerHTML = Object.entries(labels)
-            .map(([key, label]) => {
-              const value = data[key] ?? "-";
-              return `<tr><td>${label}</td><td>${value}</td></tr>`;
-            })
-            .join("");
-          resultTable.hidden = false;
-        } catch (error) {
-          errorEl.textContent = `오류: ${error.message}`;
-        }
+          const r = await fetch('/api/stock/' + encodeURIComponent(sym));
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.error || '조회 실패');
+          document.getElementById('resultBody').innerHTML = Object.entries(stockLabels)
+            .map(([k, label]) => `<tr><td style="width:40%;font-weight:600;color:#9ba3b2">${label}</td><td>${d[k] ?? '—'}</td></tr>`)
+            .join('');
+          tbl.hidden = false;
+        } catch (e) { errEl.textContent = '오류: ' + e.message; }
       }
 
-      searchBtn.addEventListener("click", fetchStock);
-      symbolInput.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") fetchStock();
+      document.getElementById('searchBtn').addEventListener('click', fetchStock);
+      document.getElementById('symbolInput').addEventListener('keydown', e => { if (e.key === 'Enter') fetchStock(); });
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // ③ 설정
+      // ═══════════════════════════════════════════════════════════════════════
+      let currentStocks = [];
+
+      function renderStockTags() {
+        const c = document.getElementById('stockTagsContainer');
+        c.innerHTML = '';
+        currentStocks.forEach((s, i) => {
+          const tag = document.createElement('span');
+          tag.className = 'stock-tag';
+          tag.innerHTML = `${s} <button data-idx="${i}" title="삭제">✕</button>`;
+          c.appendChild(tag);
+        });
+        c.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            currentStocks.splice(Number(btn.dataset.idx), 1);
+            renderStockTags();
+          });
+        });
+      }
+
+      async function loadConfig() {
+        try {
+          const cfg = await fetch('/api/config').then(r => r.json());
+          document.getElementById('cfg-app_key').value = cfg.api?.app_key || '';
+          document.getElementById('cfg-app_secret').value = cfg.api?.app_secret || '';
+          document.getElementById('cfg-cano').value = cfg.api?.cano || '';
+          document.getElementById('cfg-acnt_prdt_cd').value = cfg.api?.acnt_prdt_cd || '01';
+          document.getElementById('cfg-url_base').value = cfg.api?.url_base || 'https://openapivts.koreainvestment.com:9443';
+
+          document.getElementById('cfg-use_discord').checked = !!cfg.discord?.use_discord;
+          document.getElementById('cfg-webhook_url').value = cfg.discord?.webhook_url || '';
+
+          document.getElementById('cfg-buy_amount').value = cfg.trading?.buy_amount ?? 100000;
+          document.getElementById('cfg-sell_profit_percent').value = cfg.trading?.sell_profit_percent ?? 5.0;
+          document.getElementById('cfg-stop_loss_percent').value = cfg.trading?.stop_loss_percent ?? -3.0;
+          document.getElementById('cfg-max_buy_count').value = cfg.trading?.max_buy_count ?? 5;
+          document.getElementById('cfg-trading_start_time').value = cfg.trading?.trading_start_time || '09:00';
+          document.getElementById('cfg-trading_end_time').value = cfg.trading?.trading_end_time || '15:20';
+
+          currentStocks = Array.isArray(cfg.stocks) ? [...cfg.stocks] : [];
+          renderStockTags();
+        } catch (e) { showToast('설정 로드 실패: ' + e.message, 'error'); }
+      }
+
+      document.getElementById('addStockBtn').addEventListener('click', () => {
+        const v = document.getElementById('newStockInput').value.trim().toUpperCase();
+        if (!v) return;
+        if (!currentStocks.includes(v)) { currentStocks.push(v); renderStockTags(); }
+        document.getElementById('newStockInput').value = '';
       });
+      document.getElementById('newStockInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('addStockBtn').click();
+      });
+
+      document.getElementById('saveConfigBtn').addEventListener('click', async () => {
+        const cfg = {
+          api: {
+            app_key: document.getElementById('cfg-app_key').value,
+            app_secret: document.getElementById('cfg-app_secret').value,
+            cano: document.getElementById('cfg-cano').value,
+            acnt_prdt_cd: document.getElementById('cfg-acnt_prdt_cd').value,
+            url_base: document.getElementById('cfg-url_base').value,
+          },
+          discord: {
+            use_discord: document.getElementById('cfg-use_discord').checked,
+            webhook_url: document.getElementById('cfg-webhook_url').value,
+          },
+          trading: {
+            buy_amount: Number(document.getElementById('cfg-buy_amount').value),
+            sell_profit_percent: Number(document.getElementById('cfg-sell_profit_percent').value),
+            stop_loss_percent: Number(document.getElementById('cfg-stop_loss_percent').value),
+            max_buy_count: Number(document.getElementById('cfg-max_buy_count').value),
+            trading_start_time: document.getElementById('cfg-trading_start_time').value,
+            trading_end_time: document.getElementById('cfg-trading_end_time').value,
+          },
+          stocks: currentStocks,
+        };
+        try {
+          const r = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg) });
+          if (!r.ok) throw new Error((await r.json()).error);
+          showToast('✅ 설정이 저장되었습니다.');
+        } catch (e) { showToast('저장 실패: ' + e.message, 'error'); }
+      });
+
+      document.getElementById('resetConfigBtn').addEventListener('click', async () => {
+        if (!confirm('설정을 기본값으로 초기화하시겠습니까?')) return;
+        try {
+          await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+          await loadConfig();
+          showToast('기본값으로 초기화되었습니다.');
+        } catch (e) { showToast('초기화 실패', 'error'); }
+      });
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // ④ 서버 관리
+      // ═══════════════════════════════════════════════════════════════════════
+      let localLogs = [];
+
+      async function refreshServerStatus() {
+        try {
+          const st = await fetch('/api/server/status').then(r => r.json());
+          const dot = document.getElementById('statusDot');
+          const txt = document.getElementById('statusText');
+          const pid = document.getElementById('pidText');
+
+          dot.className = 'status-dot' + (st.running ? ' running' : '');
+          txt.textContent = st.running ? '실행 중' : '중지됨';
+          txt.style.color = st.running ? '#4caf50' : '#f44336';
+          pid.textContent = st.running ? `PID: ${st.pid}` : '';
+
+          const badge = document.getElementById('sidebarBadge');
+          badge.textContent = st.running ? '● 실행 중' : '● 서버 중지';
+          badge.className = 'server-badge' + (st.running ? '' : ' off');
+
+          if (st.logs && st.logs.length > 0) {
+            localLogs = st.logs;
+            renderLogs();
+          }
+        } catch (e) { showToast('상태 조회 실패', 'error'); }
+      }
+
+      function renderLogs() {
+        const box = document.getElementById('logBox');
+        if (localLogs.length === 0) {
+          box.innerHTML = '<span style="color:#555">로그가 없습니다.</span>';
+          return;
+        }
+        box.innerHTML = localLogs.map(l =>
+          `<div class="log-line ${l.type}">` +
+          `<span class="log-time">${l.time.slice(11, 19)}</span>` +
+          `<span class="log-msg">${escHtml(l.msg.trim())}</span></div>`
+        ).join('');
+        box.scrollTop = box.scrollHeight;
+      }
+
+      function escHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+
+      document.getElementById('startBtn').addEventListener('click', async () => {
+        try {
+          const r = await fetch('/api/server/start', { method: 'POST' });
+          const d = await r.json();
+          if (r.status === 404) { showToast('autostock.py 파일을 찾을 수 없습니다.', 'error'); return; }
+          if (d.success) { showToast('AutoStock 시작됨 (PID: ' + d.pid + ')'); }
+          else { showToast(d.message || '시작 실패', 'error'); }
+          setTimeout(refreshServerStatus, 500);
+        } catch (e) { showToast('오류: ' + e.message, 'error'); }
+      });
+
+      document.getElementById('stopBtn').addEventListener('click', async () => {
+        try {
+          const d = await fetch('/api/server/stop', { method: 'POST' }).then(r => r.json());
+          if (d.success) showToast('서버가 중지되었습니다.');
+          else showToast(d.message || '중지 실패', 'error');
+          setTimeout(refreshServerStatus, 500);
+        } catch (e) { showToast('오류: ' + e.message, 'error'); }
+      });
+
+      document.getElementById('refreshLogsBtn').addEventListener('click', refreshServerStatus);
+      document.getElementById('clearLogsBtn').addEventListener('click', () => {
+        localLogs = [];
+        renderLogs();
+      });
+
+      // 자동 새로고침 (10초)
+      setInterval(async () => {
+        const serverPageActive = document.getElementById('page-server').classList.contains('active');
+        if (serverPageActive) await refreshServerStatus();
+        // 사이드바 뱃지는 항상 업데이트
+        const st = await fetch('/api/server/status').then(r => r.json()).catch(() => null);
+        if (st) {
+          const badge = document.getElementById('sidebarBadge');
+          badge.textContent = st.running ? '● 실행 중' : '● 서버 중지';
+          badge.className = 'server-badge' + (st.running ? '' : ' off');
+        }
+      }, 10000);
+
+      // ── 초기 로드 ───────────────────────────────────────────────────────────
+      loadDashboard();
     </script>
   </body>
 </html>
