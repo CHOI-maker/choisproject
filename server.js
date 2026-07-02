@@ -4,6 +4,7 @@ const yahooFinance = new YahooFinance();
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -11,6 +12,21 @@ const CONFIG_PATH = path.join(__dirname, "config.json");
 
 app.use(express.static("public"));
 app.use(express.json());
+
+// ── 속도 제한 ─────────────────────────────────────────────────────────────────
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const serverControlLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // ── 기본 설정값 ──────────────────────────────────────────────────────────────
 const DEFAULT_CONFIG = {
@@ -50,11 +66,11 @@ function writeConfig(config) {
 }
 
 // ── 설정 API ─────────────────────────────────────────────────────────────────
-app.get("/api/config", (_req, res) => {
+app.get("/api/config", apiLimiter, (_req, res) => {
   res.json(readConfig());
 });
 
-app.post("/api/config", (req, res) => {
+app.post("/api/config", apiLimiter, (req, res) => {
   try {
     writeConfig(req.body);
     res.json({ success: true });
@@ -72,13 +88,13 @@ function pushLog(type, msg) {
   if (serverLogs.length > 500) serverLogs.shift();
 }
 
-app.get("/api/server/status", (_req, res) => {
+app.get("/api/server/status", apiLimiter, (_req, res) => {
   const running =
     autostockProcess !== null && autostockProcess.exitCode === null;
   res.json({ running, pid: running ? autostockProcess.pid : null, logs: serverLogs.slice(-100) });
 });
 
-app.post("/api/server/start", (req, res) => {
+app.post("/api/server/start", serverControlLimiter, (req, res) => {
   if (autostockProcess && autostockProcess.exitCode === null) {
     return res.json({ success: false, message: "이미 실행 중입니다." });
   }
@@ -102,7 +118,7 @@ app.post("/api/server/start", (req, res) => {
   res.json({ success: true, pid: autostockProcess.pid });
 });
 
-app.post("/api/server/stop", (_req, res) => {
+app.post("/api/server/stop", serverControlLimiter, (_req, res) => {
   if (!autostockProcess || autostockProcess.exitCode !== null) {
     return res.json({ success: false, message: "실행 중인 서버가 없습니다." });
   }
@@ -111,7 +127,7 @@ app.post("/api/server/stop", (_req, res) => {
 });
 
 // ── 주식 조회 API ─────────────────────────────────────────────────────────────
-app.get("/api/stock/:symbol", async (req, res) => {
+app.get("/api/stock/:symbol", apiLimiter, async (req, res) => {
   const symbol = req.params.symbol?.trim().toUpperCase();
 
   if (!symbol) {
